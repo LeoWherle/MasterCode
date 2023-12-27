@@ -1,5 +1,5 @@
+use rand::seq::SliceRandom;
 use rand::Rng;
-use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
 use std::slice::Iter;
 
@@ -43,18 +43,17 @@ impl Color {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Guess {
-    pub colors: [Color; 5],
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize , Default)]
 pub struct Response {
     pub correct_positions: usize,
     pub correct_colors: usize,
 }
 
-pub struct ColorSequence([Color; 5]);
+pub const MAX_GUESSES: usize = 6;
+pub const ALL_FIELDS: usize = 5;
+
+#[derive(Serialize, Deserialize)]
+pub struct ColorSequence([Color; ALL_FIELDS]);
 
 impl ColorSequence {
     pub fn new(first: Color, second: Color, third: Color, fourth: Color, fifth: Color) -> Self {
@@ -64,7 +63,7 @@ impl ColorSequence {
     pub fn random() -> Self {
         let mut rng = rand::thread_rng();
 
-        let secret_sequence: [Color; 5] = [
+        let secret_sequence: [Color; ALL_FIELDS] = [
             Color::random(&mut rng),
             Color::random(&mut rng),
             Color::random(&mut rng),
@@ -75,23 +74,40 @@ impl ColorSequence {
         ColorSequence(secret_sequence)
     }
 
-    pub fn check_guess(&self, guess: &Guess) -> Response {
+    pub fn iter(&self) -> Iter<'_, Color> {
+        self.0.iter()
+    }
+
+    pub fn new_from_possible(possibilities: &mut Vec<[Color; ALL_FIELDS]>) -> Self {
+        let mut rng = rand::thread_rng();
+        let index = rng.gen_range(0..possibilities.len());
+        ColorSequence {
+            0: possibilities[index],
+        }
+    }
+
+    pub fn check_guess(&self, guess: &ColorSequence) -> Response {
         let mut correct_positions = 0;
         let mut correct_colors = 0;
         let mut secret_copy = self.0.to_vec();
 
-        for (index, &color) in guess.colors.iter().enumerate() {
+        for (index, &color) in guess.iter().enumerate() {
             if color == self.0[index] {
                 correct_positions += 1;
-                secret_copy[index] = Color::LightBlue;
             }
         }
 
-        for color in guess.colors.iter() {
+        // check if the secret sequence contains the 2 times the same color, the guess
+        // shouldn't count it as 2 correct colors
+        for color in guess.iter() {
             if secret_copy.contains(color) {
                 correct_colors += 1;
+                secret_copy.remove(secret_copy.iter().position(|&x| x == *color).unwrap());
             }
         }
+
+        // Exclude correct positions from correct colors count
+        correct_colors -= correct_positions;
 
         Response {
             correct_positions,
@@ -124,4 +140,3 @@ impl std::fmt::Display for ColorSequence {
         write!(f, "{}", s)
     }
 }
-
