@@ -1,6 +1,7 @@
 use rand::seq::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::ops::Index;
 use std::slice::Iter;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -58,13 +59,12 @@ impl std::fmt::Display for Color {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize , Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Response {
     pub lost: bool,
     pub correct_positions: usize,
     pub correct_colors: usize,
 }
-
 
 pub const MAX_GUESSES: usize = 6;
 pub const ALL_FIELDS: usize = 5;
@@ -95,12 +95,14 @@ impl ColorSequence {
         self.0.iter()
     }
 
-    pub fn new_from_possible(possibilities: &mut Vec<[Color; ALL_FIELDS]>) -> Self {
+    pub fn to_vec(&self) -> Vec<Color> {
+        self.0.to_vec()
+    }
+
+    pub fn new_from_possible(possibilities: &mut Vec<ColorSequence>) -> Self {
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..possibilities.len());
-        ColorSequence {
-            0: possibilities[index],
-        }
+        possibilities[index]
     }
 
     pub fn check_guess(&self, guess: &ColorSequence) -> Response {
@@ -131,6 +133,52 @@ impl ColorSequence {
             correct_positions,
             correct_colors,
         }
+    }
+
+    pub fn from_input() -> Self {
+        let mut input = String::new();
+        let mut colors: Vec<Color> = Vec::new();
+
+        println!("r for {}■\x1b[0m, b for {}■\x1b[0m, g for {}■\x1b[0m, y for {}■\x1b[0m, p for {}■\x1b[0m, l for {}■\x1b[0m", Color::Red, Color::Blue, Color::Green, Color::Yellow, Color::Pink, Color::LightBlue);
+        println!("Enter your 5 guesses separated with spaces: ");
+
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
+
+        for color in input.trim().split(' ') {
+            match color {
+                "r" => colors.push(Color::Red),
+                "b" => colors.push(Color::Blue),
+                "g" => colors.push(Color::Green),
+                "y" => colors.push(Color::Yellow),
+                "p" => colors.push(Color::Pink),
+                "l" => colors.push(Color::LightBlue),
+                _ => println!("Invalid color: {}", color),
+            }
+        }
+
+        if colors.len() != ALL_FIELDS {
+            panic!("Invalid number of colors");
+        }
+
+        ColorSequence::new(colors[0], colors[1], colors[2], colors[3], colors[4])
+    }
+}
+
+impl Index<usize> for ColorSequence {
+    type Output = Color;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl Copy for ColorSequence {}
+
+impl Clone for ColorSequence {
+    fn clone(&self) -> Self {
+        ColorSequence(self.0)
     }
 }
 

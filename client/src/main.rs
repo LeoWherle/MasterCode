@@ -23,7 +23,7 @@ fn main() {
             for &c3 in Color::iter() {
                 for &c4 in Color::iter() {
                     for &c5 in Color::iter() {
-                        possibilities.push([c1, c2, c3, c4, c5]);
+                        possibilities.push(ColorSequence::new(c1, c2, c3, c4, c5));
                     }
                 }
             }
@@ -79,7 +79,7 @@ fn main() {
 
 /// based on (Knuth's algorithm) filter the possibilities based on the response
 fn filter_possibilities(
-    possibilities: &mut Vec<[Color; 5]>,
+    possibilities: &mut Vec<ColorSequence>,
     guess: &ColorSequence,
     response: &Response,
 ) {
@@ -117,3 +117,4 @@ fn filter_possibilities(
         }
     }
 }
+
