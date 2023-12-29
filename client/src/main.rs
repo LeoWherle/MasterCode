@@ -1,16 +1,12 @@
-use common::{Color, ColorSequence, Response, MAX_GUESSES, ALL_FIELDS};
+use common::{Color, ColorSequence, Response, ALL_FIELDS};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
-
 fn main() {
     let mut stream = TcpStream::connect("127.0.0.1:8000").expect("Could not connect to server");
-    
-    // 16 comming from the serialized size of Response
-    let mut buffer = [0; 16];
 
-    let mut guesses_left = MAX_GUESSES as i32;
-    let mut won = false;
+    // 16 comming from the serialized size of Response
+    let mut buffer = [0; 17];
 
     let mut current_guess = ColorSequence::new(
         Color::Red,
@@ -20,7 +16,7 @@ fn main() {
         Color::Green,
     );
 
-    let mut possibilities = vec![];
+    let mut possibilities = Vec::with_capacity(5 * 5 * 5 * 5 * 5);
 
     for &c1 in Color::iter() {
         for &c2 in Color::iter() {
@@ -34,10 +30,11 @@ fn main() {
         }
     }
 
-    while guesses_left >= 0 {
+    let mut lost = false;
+
+    loop {
         // Send guess to server
         let guess_bytes = bincode::serialize(&current_guess).unwrap();
-        println!("Sending guess of size: {}", guess_bytes.len());
         stream
             .write_all(&guess_bytes)
             .expect("Failed to send guess to server");
@@ -48,35 +45,43 @@ fn main() {
             .expect("Failed to read response from server");
         let response: Response = bincode::deserialize(&buffer).unwrap();
 
-        println!("Guess: {:?}, Response: {:?}", current_guess, response);
+        println!("Guess: {}, Response: {:?}", current_guess, response);
 
         if response.correct_positions == ALL_FIELDS {
-            won = true;
+            break;
+        }
+        if response.lost {
+            lost = true;
             break;
         }
 
-        // Modify current guess based on received feedback
-        filter_possibilities(&mut possibilities, &current_guess, response);
+        filter_possibilities(&mut possibilities, &current_guess, &response);
         current_guess = ColorSequence::new_from_possible(&mut possibilities);
-        guesses_left -= 1;
     }
 
-    if won == true {
-        println!(
-            "GG, secret sequence guessed! in {} guesses",
-            6 - guesses_left
-        );
-    } else {
-        println!("Game over, what a noob!");
+    if lost {
+        println!("Possibilities left: {}", possibilities.len());
+        // print all the possibilities
+        for possibility in possibilities {
+            println!(
+                "{}",
+                ColorSequence::new(
+                    possibility[0],
+                    possibility[1],
+                    possibility[2],
+                    possibility[3],
+                    possibility[4]
+                )
+            );
+        }
     }
 }
 
-
-/// based on (Knuth's algorithm)
+/// based on (Knuth's algorithm) filter the possibilities based on the response
 fn filter_possibilities(
     possibilities: &mut Vec<[Color; 5]>,
     guess: &ColorSequence,
-    response: Response,
+    response: &Response,
 ) {
     let mut i = 0;
 

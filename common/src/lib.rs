@@ -43,10 +43,31 @@ impl Color {
     }
 }
 
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // corresponding ansi color codes
+        let color = match self {
+            Color::Red => "\x1b[31m",
+            Color::Blue => "\x1b[34m",
+            Color::Green => "\x1b[32m",
+            Color::Yellow => "\x1b[33m",
+            Color::Pink => "\x1b[35m",
+            Color::LightBlue => "\x1b[36m",
+        };
+        write!(f, "{}", color)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize , Default)]
 pub struct Response {
+    pub lost: bool,
     pub correct_positions: usize,
     pub correct_colors: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Guess {
+    colors: [Color; 5],
 }
 
 pub const MAX_GUESSES: usize = 6;
@@ -110,22 +131,10 @@ impl ColorSequence {
         correct_colors -= correct_positions;
 
         Response {
+            lost: false,
             correct_positions,
             correct_colors,
         }
-    }
-}
-
-// implement debug and display for ColorSequence
-impl std::fmt::Debug for ColorSequence {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-
-        for color in self.0.iter() {
-            s.push_str(&format!("{:?} ", color));
-        }
-
-        write!(f, "{}", s)
     }
 }
 
@@ -134,9 +143,16 @@ impl std::fmt::Display for ColorSequence {
         let mut s = String::new();
 
         for color in self.0.iter() {
-            s.push_str(&format!("{:?} ", color));
+            s.push_str(&format!("{}■\x1b[0m ", color));
         }
 
         write!(f, "{}", s)
+    }
+}
+
+// implemnet into Guess
+impl From<Guess> for ColorSequence {
+    fn from(guess: Guess) -> Self {
+        ColorSequence(guess.colors)
     }
 }

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mastermind Game</title>
+    <style>
+        .color-picker {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .color-picker select {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+
+        select:hover {
+            background-color: #f8f9fa;
+        }
+
+        .board-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .board-row .color-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 7px;
+            border: 2px solid black;
+        }
+
+        .feedback-row {
+            display: flex;
+            align-items: center;
+        }
+
+        .feedback-circle {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-left: 5px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Master Code</h1>
+    <form id="guessForm">
+        <div class="color-picker">
+            <select name="color1" onchange="updateColor(this)" style="background-color: red;">
+                <option value="Red" style="background-color: red;"></option>
+                <option value="Blue" style="background-color: blue;"></option>
+                <option value="Green" style="background-color: green;"></option>
+                <option value="Yellow" style="background-color: yellow;"></option>
+                <option value="Pink" style="background-color: pink;"></option>
+                <option value="LightBlue" style="background-color: lightblue;"></option>
+            </select>
+
+            <select name="color2" onchange="updateColor(this)" style="background-color: red;">
+                <option value="Red" style="background-color: red;"></option>
+                <option value="Blue" style="background-color: blue;"></option>
+                <option value="Green" style="background-color: green;"></option>
+                <option value="Yellow" style="background-color: yellow;"></option>
+                <option value="Pink" style="background-color: pink;"></option>
+                <option value="LightBlue" style="background-color: lightblue;"></option>
+            </select>
+
+            <select name="color3" onchange="updateColor(this)" style="background-color: red;">
+                <option value="Red" style="background-color: red;"></option>
+                <option value="Blue" style="background-color: blue;"></option>
+                <option value="Green" style="background-color: green;"></option>
+                <option value="Yellow" style="background-color: yellow;"></option>
+                <option value="Pink" style="background-color: pink;"></option>
+                <option value="LightBlue" style="background-color: lightblue;"></option>
+            </select>
+
+            <select name="color4" onchange="updateColor(this)" style="background-color: red;">
+                <option value="Red" style="background-color: red;"></option>
+                <option value="Blue" style="background-color: blue;"></option>
+                <option value="Green" style="background-color: green;"></option>
+                <option value="Yellow" style="background-color: yellow;"></option>
+                <option value="Pink" style="background-color: pink;"></option>
+                <option value="LightBlue" style="background-color: lightblue;"></option>
+            </select>
+
+            <select name="color5" onchange="updateColor(this)" style="background-color: red;">
+                <option value="Red" style="background-color: red;"></option>
+                <option value="Blue" style="background-color: blue;"></option>
+                <option value="Green" style="background-color: green;"></option>
+                <option value="Yellow" style="background-color: yellow;"></option>
+                <option value="Pink" style="background-color: pink;"></option>
+                <option value="LightBlue" style="background-color: lightblue;"></option>
+            </select>
+        </div>
+        
+        <button type="submit">Submit Guess</button>
+    </form>
+
+    <div id="board">
+        <!-- Guess rows and feedback rows will be added here dynamically -->
+    </div>
+
+    <script>
+        /// Get value of the selected background color and update the color of the button
+        function updateColor(select) {
+            select.style.backgroundColor = select.value;
+        }
+
+        document.getElementById('guessForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const colors = [];
+
+            for (let i = 1; i <= 5; i++) {
+                const color = formData.get(`color${i}`);
+                colors.push(color);
+            }
+
+            const guess = {
+                colors: colors
+            };
+
+            const response = await fetch('/guess', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+    
+                },
+                body: JSON.stringify(guess)
+            });
+
+
+            const result = await response.json();
+            console.log(result); // You can handle the response here (displaying feedback, etc.)
+
+            const board = document.getElementById('board');
+
+            // Create a new row for the guess
+            const guessRow = document.createElement('div');
+            guessRow.classList.add('board-row');
+
+            for (const color of guess.colors) {
+                const colorCircle = document.createElement('div');
+                colorCircle.classList.add('color-circle');
+                colorCircle.style.backgroundColor = color.toLowerCase();
+                guessRow.appendChild(colorCircle);
+            }
+
+            // Create a new row for the feedback
+            const feedbackRow = document.createElement('div');
+            feedbackRow.classList.add('board-row');
+
+            for (let i = 0; i < result.correct_positions; i++) {
+                const feedbackCircle = document.createElement('div');
+                feedbackCircle.classList.add('feedback-circle');
+                feedbackCircle.style.backgroundColor = 'black';
+                feedbackRow.appendChild(feedbackCircle);
+            }
+
+            for (let i = 0; i < result.correct_colors; i++) {
+                const feedbackCircle = document.createElement('div');
+                feedbackCircle.classList.add('feedback-circle');
+                feedbackCircle.style.backgroundColor = 'gray';
+                feedbackRow.appendChild(feedbackCircle);
+            }
+
+            board.appendChild(guessRow);
+            board.appendChild(feedbackRow);
+        });
+    </script>
+</body>
+
+</html>
