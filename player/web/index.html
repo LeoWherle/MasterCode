@@ -123,9 +123,7 @@
                 colors.push(color);
             }
 
-            const guess = {
-                colors: colors
-            };
+            const guess = colors;
 
             const response = await fetch('/guess', {
                 method: 'POST',
@@ -146,7 +144,7 @@
             const guessRow = document.createElement('div');
             guessRow.classList.add('board-row');
 
-            for (const color of guess.colors) {
+            for (const color of guess) {
                 const colorCircle = document.createElement('div');
                 colorCircle.classList.add('color-circle');
                 colorCircle.style.backgroundColor = color.toLowerCase();

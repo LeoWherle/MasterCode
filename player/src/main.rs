@@ -1,33 +1,52 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse, HttpRequest};
 use actix_web::cookie::Cookie;
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use common::{ColorSequence, MAX_GUESSES, ALL_FIELDS};
+use std::collections::HashMap;
 use std::fs;
 use std::sync::RwLock;
-use std::collections::HashMap;
-use common::{ColorSequence, Guess};
 use tracing::{debug, info};
 use uuid::Uuid;
 
-type AppState = RwLock<HashMap<String, ColorSequence>>;
+type AppState = RwLock<HashMap<String, (ColorSequence, u32)>>;
 
-async fn play_game(req: HttpRequest, guess: web::Json<Guess>, data: web::Data<AppState>) -> impl Responder {
-    let guess: ColorSequence = guess.into_inner().into();
+async fn play_game(
+    req: HttpRequest,
+    guess: web::Json<ColorSequence>,
+    data: web::Data<AppState>,
+) -> impl Responder {
     let mut map = data.write().unwrap();
 
-    let player_id = req.cookie("player_id").map(|c| c.value().to_string()).unwrap_or_default();
-    let sequence = map.entry(player_id).or_insert_with(ColorSequence::random);
+    let player_id = req
+        .cookie("player_id")
+        .map(|c| c.value().to_string())
+        .unwrap_or_default();
+    let (sequence, tries) = map.entry(player_id.clone()).or_insert_with(|| (ColorSequence::random(), 0));
     let response = guess.check_guess(sequence);
 
     info!("Guess: {}", guess);
+
+    if response.correct_positions == ALL_FIELDS {
+        *tries = 0;
+        return HttpResponse::Ok().json("Congratulations! You won the game!");
+    } else {
+        *tries += 1;
+        if *tries >= MAX_GUESSES as u32 {
+            map.remove(&player_id);
+        }
+    }
 
     HttpResponse::Ok().json(response)
 }
 
 async fn index(req: HttpRequest) -> HttpResponse {
-    let player_id = req.cookie("player_id").map(|c| c.value().to_string()).unwrap_or_else(|| {
-        let new_id = Uuid::new_v4().to_string();
-        debug!("New player id: {}", new_id);
-        new_id
-    });
+    let player_id = req
+        .cookie("player_id")
+        .map(|c| c.value().to_string())
+        .unwrap_or_else(|| {
+            let new_id = Uuid::new_v4().to_string();
+            debug!("New player id: {}", new_id);
+            new_id
+        });
 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -39,7 +58,7 @@ async fn index(req: HttpRequest) -> HttpResponse {
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     tracing_subscriber::fmt::init();
-    let shared_data = web::Data::new(RwLock::new(HashMap::<String, ColorSequence>::new()));
+    let shared_data = web::Data::new(RwLock::new(HashMap::<String, (ColorSequence, u32)>::new()));
 
     // print computer local IP
     let local_ip = get_if_addrs::get_if_addrs()

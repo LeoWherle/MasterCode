@@ -65,10 +65,6 @@ pub struct Response {
     pub correct_colors: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Guess {
-    colors: [Color; 5],
-}
 
 pub const MAX_GUESSES: usize = 6;
 pub const ALL_FIELDS: usize = 5;
@@ -147,12 +143,5 @@ impl std::fmt::Display for ColorSequence {
         }
 
         write!(f, "{}", s)
-    }
-}
-
-// implemnet into Guess
-impl From<Guess> for ColorSequence {
-    fn from(guess: Guess) -> Self {
-        ColorSequence(guess.colors)
     }
 }
